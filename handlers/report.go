@@ -3,9 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/jung-kurt/gofpdf"
 	"net/http"
 	"santori/linkchecker/models"
+
+	"github.com/jung-kurt/gofpdf"
 )
 
 func GenerateReport(w http.ResponseWriter, r *http.Request) {
@@ -21,6 +22,9 @@ func GenerateReport(w http.ResponseWriter, r *http.Request) {
 	pdf.AddPage()
 	pdf.Cell(0, 10, fmt.Sprintf("PDF with info"))
 	pdf.Ln(12)
+
+	models.Mu.Lock()
+	defer models.Mu.Unlock()
 
 	for _, num := range req.LinksNum {
 		if group, ok := models.LinksStorage[num-1]; ok {
@@ -40,9 +44,9 @@ func GenerateReport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", "attachment; filename=report.pdf")
 
-	err := pdf.Output(w)
-	if err != nil {
+	if err := pdf.Output(w); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "error generating pdf")
+		return
 	}
 }
